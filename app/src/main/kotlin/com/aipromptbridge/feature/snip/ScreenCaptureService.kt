@@ -81,7 +81,11 @@ class ScreenCaptureService : Service() {
         if (released) return
         try {
             val manager = getSystemService(MediaProjectionManager::class.java)
-            val mediaProjection = manager.getMediaProjection(resultCode, data)
+            val mediaProjection = manager?.getMediaProjection(resultCode, data)
+                ?: run {
+                    fail("Could not obtain MediaProjection.")
+                    return
+                }
             projection = mediaProjection
 
             // The callback MUST be registered before createVirtualDisplay (Android 14+ requirement).

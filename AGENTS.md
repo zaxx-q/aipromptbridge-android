@@ -13,16 +13,15 @@ The project was authored **without a compiler**, so your first job is to make it
 7. If something in the docs contradicts what the compiler/IDE tells you, trust the compiler and update the docs.
 
 ## First session — do these in order, report after each
-1. **Gradle sync.** If the AGP version is rejected by this IDE, adjust `agp` in `gradle/libs.versions.toml` (AGP Upgrade Assistant is fine).
-   Run the `wrapper` Gradle task once so `./gradlew` exists. Gradle must be >= what the chosen AGP requires.
-2. **`./gradlew :core:test`.** Fix compile errors and failing tests. For a failing test decide whether the **test or the code** is wrong
-   (tests encode behaviour ported from the original Python app — see `docs/ORIGINAL_NOTES.md` and `reference/original-python/`); don't just weaken assertions.
-3. **`./gradlew :app:assembleDebug`.** Likely trouble spots, most likely first:
-   - `designsystem/AipbIcons.kt` — icon names / `material-icons-extended` availability (isolated to that file).
-   - `designsystem/Components.kt` — Material3 parameter names (`Surface(onClick=…)`, `ModalBottomSheet`, `FilledIconButton`).
-   - `feature/snip/*` — `startActivityAndCollapse`, `requestAddTileService`, MediaProjection APIs.
-   - `core/.../provider/*Provider.kt` — kotlinx.serialization builder imports (`put`, `add`).
-   - Versions in `gradle/libs.versions.toml` (they were taken from docs but never resolved offline).
+1. **Gradle sync.** *(Completed)* Sync succeeds on AGP 9.0.0 / Gradle 9.8.0.
+2. **`./gradlew :core:test`.** *(77 of 78 tests pass)*
+   - Failing test: `WordDiffTest > changeCountCountsRegionsNotWords` (expected 2 regions, got 3).
+   - Cause: In `core/.../diff/WordDiff.kt`, whitespace tokens (`" "`) match inter-word spaces in old text during LCS, creating an `EQUAL " "` segment that splits multi-word edits (e.g. `"b"` -> `"X Y"`).
+   - Fix: Shift/slide equal whitespace segments out of multi-word insertions/deletions before computing regions, preserving both inputs.
+3. **`./gradlew :app:assembleDebug`.** Three exact blockers are identified:
+   - `compileSdk = 37` in `app/build.gradle.kts`: Compose 1.12.0 dependencies (via Compose BOM 2026.08.00) require `compileSdk = 37`.
+   - `designsystem/Previews.kt`: Line 20 contains `design/stitch/*/screen.png`. In Kotlin, `/*` inside KDoc `/** ... */` begins a nested block comment, leaving the outer comment unclosed at EOF. Rephrase to avoid `/*`.
+   - `feature/snip/ScreenCaptureService.kt`: `manager.getMediaProjection(resultCode, data)` returns `MediaProjection?`. Lines 88 and 106 dereference it without a null check; add a null-check guard before `registerCallback` and `createVirtualDisplay`.
 4. **Open the `@Preview`s** in `designsystem/Previews.kt` (light + dark) and compare with `design/stitch/*/screen.png`.
    Fix visible deviations (spacing, colours, shapes) in the design system, not per-screen.
 5. **Run on an emulator** (API 30+): setup screen → save a key → select text in another app → AIPromptBridge → *Fix Grammar* (README "Setup", steps 5-6).

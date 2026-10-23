@@ -19,7 +19,7 @@ It is also a Kotlin learning assignment (see `CONCEPTS.md` for where each requir
 
 | Area | State |
 |---|---|
-| `:core` (providers, key rotation, profiles, prompts, diff, storage, engine) | **Fully implemented**, 78 unit tests written (not yet run) |
+| `:core` (providers, key rotation, profiles, prompts, diff, storage, engine) | **Fully implemented**, 78/78 unit tests passing |
 | Design system (tokens, theme, components) | Implemented from the Stitch design |
 | Setup screen (provider + model + 1 API key) | Implemented (minimal) |
 | **Text Edit** — Edit mode (chips, loading, diff result, Replace/Copy/Retry, read-only handling) | Implemented, end to end |
@@ -35,8 +35,8 @@ Search for remaining work: `grep -rn "TODO" --include=*.kt --include=*.xml .` (e
 
 ## 2. Setup (Android Studio, Linux)
 
-Requirements: **Android Studio Quail (2026.1.x)**, JDK 17+ (the JBR bundled with Studio is fine), Android SDK Platform **36**
-(Studio offers to install it on first sync). Pinned versions are in `gradle/libs.versions.toml`:
+Requirements: **Android Studio Quail (2026.1.x)**, JDK 17+ (the JBR bundled with Studio is fine), Android SDK Platform **37**
+(needed for `compileSdk = 37` due to Compose 1.12.0 in the BOM; `targetSdk` is 36, `minSdk` is 30). Pinned versions are in `gradle/libs.versions.toml`:
 AGP 9.0.0 (needs Gradle ≥ 9.1.0 — set in `gradle/wrapper/gradle-wrapper.properties`), Kotlin 2.3.21, Compose BOM 2026.08.00,
 activity-compose 1.13.0, lifecycle 2.10.0, coroutines 1.11.0, kotlinx-serialization 1.12.0.
 
@@ -125,12 +125,13 @@ Variations… toggles that inject instructions) are `PromptModifier` (not `Modif
 Work in this order. After each step: `./gradlew :core:test`, then run the app.
 
 ### Phase 0 — make it build (do this first)
-- Sync, run `:core:test`, then `:app:assembleDebug`. Expect *some* compile errors; fix them. Likely suspects (ranked):
-  1. **Icons**: `androidx.compose.material:material-icons-extended` / specific `Icons.Outlined.*` names → all icon use is isolated in
-     `app/.../designsystem/AipbIcons.kt`. If a name or the artifact is missing, replace that entry (Vector Asset Studio → Material Symbols).
-  2. **AGP/Gradle versions** vs your Studio (see Setup step 1).
-  3. Compose experimental API opt-ins, `ModalBottomSheet` parameter names (Material3 version from the BOM).
-  4. `kotlinx.serialization` API details in provider code (`put`, `add`, `buildJsonObject`).
+- Run `:core:test`, then `:app:assembleDebug`. Initial compilation identified the exact list of 4 fixes needed:
+  1. **`:core:test`**: 77 of 78 tests pass. Single failure: `WordDiffTest.changeCountCountsRegionsNotWords` (expected 2 regions, got 3).
+     - *Cause:* In `core/.../diff/WordDiff.kt`, whitespace tokens (`" "`) match inter-word spaces in old text, splitting multi-word edits (e.g. `"b"` -> `"X Y"`) with an `EQUAL " "` segment.
+     - *Fix:* Slide/shift equal whitespace segments out of multi-word insertions/deletions before counting regions.
+  2. **`compileSdk = 37`**: Compose 1.12.0 dependencies (from Compose BOM 2026.08.00) require `compileSdk = 37` in `app/build.gradle.kts`.
+  3. **`Previews.kt` syntax error**: Line 20 has `design/stitch/*/screen.png`; in Kotlin, `/*` inside KDoc `/** ... */` is parsed as a nested block comment, causing an `Unclosed comment` syntax error at EOF. Rephrase to avoid `/*` (e.g. `design/stitch/<screen>/screen.png`).
+  4. **`ScreenCaptureService.kt` nullability**: `MediaProjectionManager.getMediaProjection(resultCode, data)` returns `MediaProjection?`. Add a null-check guard before `registerCallback` and `createVirtualDisplay`.
 - Do **not** "fix" errors by adding `android.*` imports to `:core`.
 
 ### Phase 1 — verify Text Edit on a device
@@ -222,7 +223,7 @@ Add a second row of toggle chips (or open it from the "tune" button), pass the s
 
 ## 7. Known risks / unverified items (be skeptical of these first)
 
-1. **Nothing has been compiled.** Expect a handful of compile errors (typos, API signatures).
+1. **Compilation status**: Initial compilation check completed; Gradle sync succeeds on AGP 9.0.0. The 4 specific compile/test issues were pinpointed and catalogued in Phase 0.
 2. `KeystoreSecretCipher`, `ScreenCaptureService`, `SnipTileService` and `requestAddSnipTile` follow the documented API shapes but were **never run**.
 3. `AnthropicProvider` was **not** checked against current Anthropic docs (Gemini was; OpenAI-compatible follows the long-stable chat-completions format). Marked `TODO(verify)`.
 4. `material-icons-extended` availability in the pinned BOM was not confirmed; AGP 9.0.0 chosen because Quail supports it, newer patch versions may exist.

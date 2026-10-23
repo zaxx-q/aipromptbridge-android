@@ -17,7 +17,7 @@ import com.aipromptbridge.core.diff.WordDiff
 
 /**
  * Design-system gallery. Open this file in Android Studio's Split/Design view to compare against
- * design/stitch/*/screen.png without running the app. Each preview renders in light AND dark.
+ * `design/stitch/<screen>/screen.png` without running the app. Each preview renders in light AND dark.
  */
 @Preview(name = "Light", showBackground = true, backgroundColor = 0xFFFAF8FF)
 @Preview(name = "Dark", showBackground = true, backgroundColor = 0xFF0F1424, uiMode = Configuration.UI_MODE_NIGHT_YES)

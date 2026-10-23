@@ -1,7 +1,7 @@
 # Versions were looked up in current Android / library docs (Context7) when this scaffold was generated.
 # If Android Studio suggests newer compatible versions, bumping them is fine.
 [versions]
-agp = "9.0.0"                 # Android Studio Quail (2026.1.x) supports AGP 9.x. Needs Gradle >= 9.1.0, JDK 17+, Build Tools 36.0.0
+agp = "9.4.1"                 # Android Studio Quail (2026.1.x) supports AGP 9.x. Needs Gradle >= 9.1.0, JDK 17+, Build Tools 36.0.0
 kotlin = "2.3.21"
 composeBom = "2026.08.00"
 activityCompose = "1.13.0"

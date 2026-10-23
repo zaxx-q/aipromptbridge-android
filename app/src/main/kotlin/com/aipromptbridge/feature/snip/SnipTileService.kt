@@ -34,6 +34,7 @@ class SnipTileService : TileService() {
             startActivityAndCollapse(pending)
         } else {
             @Suppress("DEPRECATION")
+            @android.annotation.SuppressLint("StartActivityAndCollapseDeprecated")
             startActivityAndCollapse(intent)
         }
     }

@@ -53,7 +53,7 @@ object WordDiff {
         }
         while (i < n) { raw += DiffSegment(DiffKind.DELETE, a[i]); i++ }
         while (j < m) { raw += DiffSegment(DiffKind.INSERT, b[j]); j++ }
-        return merge(raw)
+        return cleanup(merge(raw))
     }
 
     /** Number of changed regions (each maximal run of INSERT/DELETE counts once). */
@@ -87,5 +87,57 @@ object WordDiff {
             }
         }
         return merged
+    }
+
+    /**
+     * Shifts equal whitespace segments out of multi-word edits towards the boundary,
+     * so that multi-word replacements/insertions/deletions don't get split by inter-word spaces.
+     */
+    private fun cleanup(segments: List<DiffSegment>): List<DiffSegment> {
+        var current = segments
+        var changed = true
+        var passes = 0
+        while (changed && passes < 10) {
+            changed = false
+            passes++
+            val result = mutableListOf<DiffSegment>()
+            var idx = 0
+            while (idx < current.size) {
+                val seg = current[idx]
+                if (seg.kind == DiffKind.EQUAL && seg.text.isBlank() && idx > 0 && idx + 1 < current.size) {
+                    val prev = current[idx - 1]
+                    val next1 = current[idx + 1]
+                    val next2 = if (idx + 2 < current.size) current[idx + 2] else null
+
+                    if (prev.kind != DiffKind.EQUAL) {
+                        if (next2 != null && next1.kind != DiffKind.EQUAL && next2.kind != DiffKind.EQUAL && next1.kind != next2.kind) {
+                            if ((seg.text + next1.text).endsWith(seg.text) && (seg.text + next2.text).endsWith(seg.text)) {
+                                val shifted1 = DiffSegment(next1.kind, (seg.text + next1.text).dropLast(seg.text.length))
+                                val shifted2 = DiffSegment(next2.kind, (seg.text + next2.text).dropLast(seg.text.length))
+                                result.add(shifted1)
+                                result.add(shifted2)
+                                result.add(seg)
+                                idx += 3
+                                changed = true
+                                continue
+                            }
+                        } else if (next1.kind != DiffKind.EQUAL) {
+                            if ((seg.text + next1.text).endsWith(seg.text)) {
+                                val shifted1 = DiffSegment(next1.kind, (seg.text + next1.text).dropLast(seg.text.length))
+                                result.add(shifted1)
+                                result.add(seg)
+                                idx += 2
+                                changed = true
+                                continue
+                            }
+                        }
+                    }
+                }
+                result.add(seg)
+                idx++
+            }
+            current = merge(result)
+        }
+        return current
     }
 }
