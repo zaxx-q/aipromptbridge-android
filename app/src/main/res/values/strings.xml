@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">AIPromptBridge</string>
+    <string name="process_text_label">AIPromptBridge</string>
+    <string name="tile_label">Snip &amp; Ask</string>
+    <string name="capture_channel_name">Screen capture</string>
+    <string name="capture_notification_text">Capturing your screen…</string>
+</resources>
