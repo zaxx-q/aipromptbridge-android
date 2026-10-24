@@ -82,3 +82,25 @@ private fun InputsAndLoadingPreview() = PreviewFrame {
     InstructionField(value = "", onValueChange = {}, placeholder = "Or tell it what to change…", onSend = {})
     Panel { SkeletonLines() }
 }
+
+@ThemePreviews
+@Composable
+private fun ChatModePreview() = PreviewFrame {
+    com.aipromptbridge.feature.textedit.CollapsibleSelectionPill(
+        "I am looking into that now, will update you soon. Needs executive sign-off before 5 PM."
+    )
+    com.aipromptbridge.feature.textedit.UserMessageBubble(
+        "Can you give me 3 ways to make this sound more decisive and confident?"
+    )
+    com.aipromptbridge.feature.textedit.AssistantMessageBlock(
+        text = "Here are three ways to strengthen your tone while preserving your original intent:\n\n" +
+                "• Direct & actionable: \"I've attached the proposal sent last Thursday. Let me know your feedback by Friday.\"\n" +
+                "• Ownership focus: \"Following up on our proposal from Thursday—are there specific questions we can resolve together?\"\n" +
+                "• Executive brief: \"Our proposal from last Thursday is ready for review. When are you free to discuss next steps?\"",
+        canReplace = true,
+        onReplace = {},
+        onCopy = {},
+        onRetry = {},
+    )
+}
+

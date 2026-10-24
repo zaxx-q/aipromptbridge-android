@@ -36,6 +36,10 @@ class ProcessTextActivity : ComponentActivity() {
         TextEditViewModelFactory((application as AipbApp).container, selectedText, isReadOnly)
     }
 
+    private val chatViewModel: ChatViewModel by viewModels {
+        ChatViewModelFactory((application as AipbApp).container, selectedText, isReadOnly)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
@@ -53,6 +57,7 @@ class ProcessTextActivity : ComponentActivity() {
                 }
                 TextEditSheet(
                     viewModel = viewModel,
+                    chatViewModel = chatViewModel,
                     onDismiss = { finish() },
                     onReplace = { replaceSelectionAndFinish(it) },
                     onCopy = { copyToClipboard(it) },

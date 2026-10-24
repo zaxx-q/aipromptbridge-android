@@ -23,7 +23,7 @@ It is also a Kotlin learning assignment (see `CONCEPTS.md` for where each requir
 | Design system (tokens, theme, components) | Implemented from the Stitch design |
 | Setup screen (provider + model + 1 API key) | Implemented (minimal) |
 | **Text Edit** — Edit mode (chips, loading, diff result, Replace/Copy/Retry, read-only handling) | Implemented, end to end |
-| Text Edit — **Chat mode** | **TODO** (Phase 4) — placeholder + exact plan |
+| Text Edit — **Chat mode** | Implemented (Phase 4), end to end with tests & previews |
 | Full **Settings** (profiles, multi-key, triggers, behaviour, theme) | **TODO** (Phase 5) |
 | **Prompt editor** (action list + edit action) | **TODO** (Phase 6) — data layer done (`PromptCatalog.updateTool`) |
 | **Snip & Ask** (tile → capture → region → action sheet) | Implemented but **never run on a device** (Phase 7 = verify/fix) |

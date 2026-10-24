@@ -12,6 +12,15 @@ class SessionTest {
     fun contextMarkerFormat() = assertEquals("[Task: Fix Grammar]", ContextMarker.forAction("Fix Grammar"))
 
     @Test
+    fun contextMarkerFirstMessageFormat() {
+        val actionLabel = "Fix Grammar"
+        val selectedText = "He go to school."
+        val userPrompt = "Make it past tense."
+        val formatted = "${ContextMarker.forAction(actionLabel)}\n\n$selectedText\n\n$userPrompt"
+        assertEquals("[Task: Fix Grammar]\n\nHe go to school.\n\nMake it past tense.", formatted)
+    }
+
+    @Test
     fun inMemoryRepositoryCreatesIncrementingIds() {
         val repo = InMemorySessionRepository()
         val a = repo.create("textedit:proofread", "A", now = 1)
