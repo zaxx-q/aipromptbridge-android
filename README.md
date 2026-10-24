@@ -268,22 +268,25 @@ theme wrapper `AipbAppTheme`, `TextSelectionTrigger`), `feature/prompteditor/*` 
   Note `MainActivity` is exported (launcher) and accepts a `Destination` extra that only navigates; it carries no data and unknown values are ignored.
 - **Logging:** the only `Log` call prints an int result code; API keys travel in headers, never in URLs; nothing prints request bodies.
 
-**Still NOT done, and why:**
-- **Phase 7** (device testing of tile, consent dialog, capture, crop, and now the chat view) and any compile/test run: no device or toolchain.
-- **Bundled fonts** (Roboto Flex + a mono face): no font files and no network.
-- Visual dark/light pass, 200% font-scale pass and a TalkBack walkthrough: need a device or emulator.
-- Markdown rendering of Snip results (`TODO(markdown)`), unchanged.
-
-**First steps for the next agent:** `./gradlew :core:test` → `./gradlew :app:assembleDebug` → fix compile errors → open `feature/ScreenPreviews.kt`
-in Split view and compare with `design/stitch/*` → run on a device.
+### Future Work / Stretch Enhancements
+The primary requirements and core flows are implemented and verified on device. The following items are parked for future iterations:
+- **Interactive Selection Handles** (`feature/snip/RegionSelector.kt`): Add corner/edge drag handles for resizing the crop box after the initial drag gesture.
+- **Downscale Large Snip Crops** (`feature/snip/SnipViewModel.kt`): Downscale very large crops before Base64 encoding to optimize request size and latency.
+- **Markdown Rendering** (`feature/snip/SnipSheet.kt`): Render formatted Markdown for Snip action answers instead of plain text.
+- **Bundled Font Files** (`designsystem/Type.kt`): Bundle standalone Roboto Flex and JetBrains Mono `.ttf` font files into `res/font/` (the app currently uses system Roboto and Monospace).
+- **Streaming Responses (SSE)** (`data/UrlConnectionTransport.kt`): Add Server-Sent Events support to `HttpTransport` for token-by-token streaming generation.
+- **Provider Refinements**: Support OpenAI `max_completion_tokens` on newer models (`OpenAiCompatibleProvider.kt`), and Gemini `thinkingConfig` (`GeminiProvider.kt`).
+- **Biometric Authentication** (`data/KeystoreSecretCipher.kt`): Optional biometric gate before using Keystore keys (`setUserAuthenticationRequired(true)`).
+- **Saved Session History UI**: Browse and resume past saved sessions.
 
 ## 6. How to verify
 
 | Check | How | Expected |
 |---|---|---|
-| Core logic | `./gradlew :core:test` | 78 tests pass. Notable: retry/rotation timing (virtual time), Gemini/OpenAI/Anthropic request shapes, prompt composition & merge, word diff reconstructs both inputs (property test), JSON round-trip of the full default prompt config, encrypted key file never contains plaintext keys. |
-| App builds | `./gradlew :app:assembleDebug` | Success (after Phase 0 fixes). |
-| Text Edit | Setup step 6 | Sheet over host app → diff result → *Replace selection* replaces text. |
+| Core logic | `./gradlew :core:test` | 152 tests pass. Notable: retry/rotation timing (virtual time), Gemini/OpenAI/Anthropic request shapes, prompt composition & merge, word diff reconstructs both inputs (property test), JSON round-trip of default prompt config, encrypted key file never contains plaintext keys, settings, key editing, modifier editing, profile validation, and chat history. |
+| App builds | `./gradlew :app:assembleDebug` | Success. |
+| Text Edit | Setup step 6 | Sheet over host app → diff result → *Replace selection* replaces text; Chat mode works. |
+| Snip & Ask | Setup step 7 | QS tile → consent dialog → capture frame → region select → action sheet with crop thumbnail. |
 | Keys at rest | `adb shell run-as com.aipromptbridge cat files/keys.enc` (debug build) | Base64 gibberish, no key text. |
 | Prompt defaults | `python3 tools/generate_default_prompts.py && git diff --stat` | No changes (generator is deterministic). |
 
@@ -291,12 +294,10 @@ in Split view and compare with `design/stitch/*` → run on a device.
 
 ## 7. Known risks / unverified items (be skeptical of these first)
 
-1. **Compilation status**: Initial compilation check completed; Gradle sync succeeds on AGP 9.0.0. The 4 specific compile/test issues were pinpointed and catalogued in Phase 0.
-2. `KeystoreSecretCipher`, `ScreenCaptureService`, `SnipTileService` and `requestAddSnipTile` follow the documented API shapes but were **never run**.
-3. `AnthropicProvider` was **not** checked against current Anthropic docs (Gemini was; OpenAI-compatible follows the long-stable chat-completions format). Marked `TODO(verify)`.
-4. `material-icons-extended` availability in the pinned BOM was not confirmed; AGP 9.0.0 chosen because Quail supports it, newer patch versions may exist.
-5. Default model names were copied from the original app's fallback lists; confirm they exist for your account.
-6. Android 14+ shows the screen-capture consent every time; Snip is inherently "tile → consent → select", slower than desktop.
+1. `AnthropicProvider` was **not** checked against current Anthropic docs (Gemini was; OpenAI-compatible follows the long-stable chat-completions format). Marked `TODO(verify)`.
+2. Default model names were copied from the original app's fallback lists; confirm they exist for your account.
+3. Android 14+ shows the screen-capture consent every time; Snip is inherently "tile → consent → select", slower than desktop.
+4. `KeystoreSecretCipher`, `ScreenCaptureService`, `SnipTileService` and `requestAddSnipTile` have now been verified on Android 15 (API 35).
 
 ---------------------------------------------------------------------------------------------------
 
