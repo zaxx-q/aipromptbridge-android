@@ -6,7 +6,7 @@
 > - Dead `SetupScreen.kt` removed.
 > - Remaining open items: bundled offline font files (Roboto Flex + monospace), TalkBack walkthrough.
 
-You are continuing **AIPromptBridge for Android**. Read `README.md` first (plan, architecture, decisions), then this file.
+You are continuing **AIPromptBridge for Android**. Read `README.md` and `docs/DEVELOPMENT.md` first (plan, architecture, decisions), then this file.
 The project was authored **without a compiler**, so your first job is to make it build and pass its tests.
 
 ## Golden rules
