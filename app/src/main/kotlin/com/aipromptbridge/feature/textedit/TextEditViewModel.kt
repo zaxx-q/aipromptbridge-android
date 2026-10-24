@@ -11,6 +11,7 @@ import com.aipromptbridge.core.prompt.PromptAction
 import com.aipromptbridge.core.prompt.PromptCatalog
 import com.aipromptbridge.core.prompt.PromptComposer
 import com.aipromptbridge.core.prompt.PromptInput
+import com.aipromptbridge.core.prompt.PromptModifier
 import com.aipromptbridge.core.prompt.PromptRequest
 import com.aipromptbridge.core.prompt.ResultDestination
 import com.aipromptbridge.core.provider.FailureKind
@@ -56,6 +57,17 @@ class TextEditViewModel(
     /** One-tap actions in user-defined order (PromptCatalog barOrder). */
     val bar: StateFlow<List<PromptAction>> = _bar.asStateFlow()
 
+    private val _modifiers = MutableStateFlow<List<PromptModifier>>(emptyList())
+    /** Toggleable instructions (Shorter, Formal, ...). Shared by all tools, so they come from the global config. */
+    val modifiers: StateFlow<List<PromptModifier>> = _modifiers.asStateFlow()
+
+    private val _activeModifiers = MutableStateFlow<Set<String>>(emptySet())
+    /**
+     * Keys of the modifiers that are switched on. Like the original popup they apply to the NEXT run (and every run
+     * after it, including the free-text instruction) and are forgotten when the sheet closes.
+     */
+    val activeModifiers: StateFlow<Set<String>> = _activeModifiers.asStateFlow()
+
     private val _profileLabel = MutableStateFlow("")
     val profileLabel: StateFlow<String> = _profileLabel.asStateFlow()
 
@@ -73,6 +85,7 @@ class TextEditViewModel(
             val tool = catalog.tool(ToolId.TEXT_EDIT)
             customAction = tool.actions[PromptComposer.CUSTOM_ID]
             _bar.value = tool.barActions()
+            _modifiers.value = catalog.config().modifiers
             val profile = engine.resolveProfile()
             _profileLabel.value = "${profile.name} · ${profile.model}"
         }
@@ -85,7 +98,12 @@ class TextEditViewModel(
         job = viewModelScope.launch {
             val outcome = engine.runAction(
                 ToolId.TEXT_EDIT,
-                PromptRequest(action, PromptInput.Text(selectedText), customInstruction = custom),
+                PromptRequest(
+                    action,
+                    PromptInput.Text(selectedText),
+                    customInstruction = custom,
+                    activeModifierKeys = _activeModifiers.value,
+                ),
             )
             _state.value = when (val result = outcome.result) {
                 is GenerateResult.Success -> {
@@ -104,6 +122,12 @@ class TextEditViewModel(
                     EditUiState.Error(result.message, missingApiKey = result.kind == FailureKind.NO_API_KEY)
             }
         }
+    }
+
+    /** Switches one modifier on/off. Call from the main thread (it is a read-modify-write on a StateFlow). */
+    fun toggleModifier(key: String) {
+        val current = _activeModifiers.value
+        _activeModifiers.value = if (key in current) current - key else current + key
     }
 
     /** The free-text instruction field ("Or tell it what to change…") uses the special _custom action. */

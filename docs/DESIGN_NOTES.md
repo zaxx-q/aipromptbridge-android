@@ -15,9 +15,10 @@ Direction: **"copy editor's blue pencil"** — calm, precise, quick. Cool paper-
 | `…_textedit_bottom_sheet_dark` | `DarkColors` in `designsystem/Color.kt` | tokens done, needs device check |
 | `aipromptbridge_screen_snip_region_selection` | `feature/snip/RegionSelector.kt` | done, unverified on device |
 | `aipromptbridge_snip_action_bottom_sheet` | `feature/snip/SnipSheet.kt` | done, unverified |
-| `aipromptbridge_settings` | `feature/settings/SetupScreen.kt` (minimal only) | **TODO Phase 5** |
-| `aipromptbridge_actions_prompt_editor` | — | **TODO Phase 6** |
-| `aipromptbridge_edit_action_fix_grammar` | — | **TODO Phase 6** |
+| `aipromptbridge_settings` | `feature/settings/SettingsScreen.kt` (+ `ProfilesScreen`, `KeysScreen`) | written, uncompiled; floating-button & streaming rows intentionally omitted |
+| `aipromptbridge_actions_prompt_editor` | `feature/prompteditor/ActionsScreen.kt` | written, uncompiled; arrows instead of drag handles |
+| `aipromptbridge_edit_action_fix_grammar` | `feature/prompteditor/ActionEditScreen.kt` | written, uncompiled; real icon picker, shows the real action id |
+| *(no Stitch screen)* modifiers list + edit | `feature/prompteditor/ModifiersScreen.kt` | written, uncompiled; reuses the Actions list / Edit Action layout language |
 
 ## Things in the mockups that must NOT be built (invented / wrong)
 - Fake status text: "Region #04", "Buffered", "Selection area: 68% of screen", "Jinja2 Ready", "Engine Ready · v2.4.12 · 42m…",
@@ -32,7 +33,7 @@ Direction: **"copy editor's blue pencil"** — calm, precise, quick. Cool paper-
 - Read-only selection result (implemented as "Copy" primary; no mockup).
 - Error states (no API key, rate limited, offline) — implemented minimally as `ErrorPanel`.
 - API keys screen, connection profile list/edit, first-run explainer for screen-capture consent, Quick Settings tile onboarding.
-- Snip "Continue in chat" hand-off.
+- Snip "Continue in chat" hand-off: implemented without a mockup as a second body of the same sheet (image thumbnail + "The image is sent with every message." above the shared chat list); needs a design review.
 
 ## Rules
 12 dp corners on controls, 28 dp top corners on sheets, 48 dp touch targets, type scale 24/20/16/14, Roboto (monospace only for pixel sizes / model ids),

@@ -3,7 +3,9 @@ package com.aipromptbridge.designsystem
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.ArrowDownward
 import androidx.compose.material.icons.outlined.ArrowUpward
 import androidx.compose.material.icons.outlined.AutoFixHigh
 import androidx.compose.material.icons.outlined.Build
@@ -20,6 +22,7 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.EditNote
 import androidx.compose.material.icons.outlined.ExpandMore
+import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Face
 import androidx.compose.material.icons.outlined.Fullscreen
 import androidx.compose.material.icons.outlined.Image
@@ -27,11 +30,14 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.LibraryBooks
 import androidx.compose.material.icons.outlined.Lightbulb
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Mood
+import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.Psychology
 import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.RateReview
 import androidx.compose.material.icons.outlined.Refresh
+import androidx.compose.material.icons.outlined.Science
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Share
@@ -72,6 +78,29 @@ object AipbIcons {
     val ExpandMore: ImageVector get() = Icons.Outlined.ExpandMore
     val Quote: ImageVector get() = Icons.Outlined.TextFields
     val Info: ImageVector get() = Icons.Outlined.Info
+    val Chevron: ImageVector get() = Icons.AutoMirrored.Outlined.KeyboardArrowRight
+    val ArrowUp: ImageVector get() = Icons.Outlined.ArrowUpward
+    val ArrowDown: ImageVector get() = Icons.Outlined.ArrowDownward
+    val Palette: ImageVector get() = Icons.Outlined.Palette
+    val Test: ImageVector get() = Icons.Outlined.Science
+    val Revert: ImageVector get() = Icons.Outlined.History
+    val Edit: ImageVector get() = Icons.Outlined.Edit
+    val Key: ImageVector get() = Icons.Outlined.Key
+    val Provider: ImageVector get() = Icons.Outlined.Public
+    val Snip: ImageVector get() = Icons.Outlined.Crop
+    val TextSelection: ImageVector get() = Icons.Outlined.TextFields
+    val Wand: ImageVector get() = Icons.Outlined.AutoFixHigh
+
+    /**
+     * Icon ids offered by the action icon picker: one id per distinct glyph (aliases such as "reply" -> chat are left out).
+     * Every id here is resolved by [byId]; keep the two in sync when adding icons.
+     */
+    val pickerIds: List<String> = listOf(
+        "auto_fix_high", "spellcheck", "edit_note", "swap_horiz", "mood", "face", "child_care", "lightbulb",
+        "psychology", "summarize", "library_books", "table_chart", "translate", "public", "code", "bug_report",
+        "build", "rate_review", "work", "chat", "content_cut", "description", "image", "visibility",
+        "info", "key", "check", "add", "tune", "arrow_forward",
+    )
 
     // ---- action / modifier icons by id
     fun byId(id: String): ImageVector = when (id) {

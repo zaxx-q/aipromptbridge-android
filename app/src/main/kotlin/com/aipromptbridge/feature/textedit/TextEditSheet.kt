@@ -47,6 +47,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -54,6 +55,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aipromptbridge.core.diff.WordDiff
 import com.aipromptbridge.core.prompt.PromptAction
+import com.aipromptbridge.core.prompt.PromptModifier
 import com.aipromptbridge.core.session.StoredMessage
 import com.aipromptbridge.designsystem.ActionChip
 import com.aipromptbridge.designsystem.Aipb
@@ -69,6 +71,7 @@ import com.aipromptbridge.designsystem.SecondaryButton
 import com.aipromptbridge.designsystem.SegmentedToggle
 import com.aipromptbridge.designsystem.SkeletonLines
 import com.aipromptbridge.designsystem.TextAction
+import com.aipromptbridge.designsystem.ToggleIconButton
 import com.aipromptbridge.designsystem.ToggleOption
 import com.aipromptbridge.feature.common.ErrorPanel
 
@@ -84,6 +87,7 @@ fun TextEditSheet(
     onReplace: (String) -> Unit,
     onCopy: (String) -> Unit,
     onOpenSetup: () -> Unit,
+    onEditActions: () -> Unit,
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val bar by viewModel.bar.collectAsStateWithLifecycle()
@@ -117,6 +121,7 @@ fun TextEditSheet(
                         onReplace = onReplace,
                         onCopy = onCopy,
                         onOpenSetup = onOpenSetup,
+                        onEditActions = onEditActions,
                     )
                 } else {
                     SelectionPreview(viewModel.selectedText, viewModel.isReadOnly)
@@ -137,6 +142,7 @@ fun TextEditSheet(
                         onReplace = onReplace,
                         onCopy = onCopy,
                         onOpenSetup = onOpenSetup,
+                        onEditActions = onEditActions,
                     )
                 }
             }
@@ -154,6 +160,7 @@ private fun EditMode(
     onReplace: (String) -> Unit,
     onCopy: (String) -> Unit,
     onOpenSetup: () -> Unit,
+    onEditActions: () -> Unit,
 ) {
     val busy = state is EditUiState.Loading
     val activeActionId = when (state) {
@@ -161,6 +168,9 @@ private fun EditMode(
         is EditUiState.Result -> state.actionId
         else -> null
     }
+    val modifiers by viewModel.modifiers.collectAsStateWithLifecycle()
+    val activeModifiers by viewModel.activeModifiers.collectAsStateWithLifecycle()
+    var showModifiers by rememberSaveable { mutableStateOf(false) }
 
     // Idle: show the selected text first. Any other state: chips first, then the result area.
     if (state is EditUiState.Idle) SelectionPreview(viewModel.selectedText, viewModel.isReadOnly)
@@ -169,8 +179,17 @@ private fun EditMode(
         actions = bar,
         activeActionId = activeActionId,
         onRun = { viewModel.run(it) },
-        onOpenSetup = onOpenSetup,
+        onEditActions = onEditActions,
+        modifierBar = if (modifiers.isEmpty()) null else ModifierBarState(
+            expanded = showModifiers,
+            activeCount = activeModifiers.size,
+            onToggle = { showModifiers = !showModifiers },
+        ),
     )
+    // Plain `if` (not AnimatedVisibility): a hidden AnimatedVisibility still gets spacing in a spacedBy Column.
+    if (showModifiers && modifiers.isNotEmpty()) {
+        ModifierRow(modifiers = modifiers, active = activeModifiers, onToggle = viewModel::toggleModifier)
+    }
 
     when (state) {
         is EditUiState.Idle -> Unit
@@ -205,6 +224,9 @@ fun ChatMode(
     onReplace: (String) -> Unit,
     onCopy: (String) -> Unit,
     onOpenSetup: () -> Unit,
+    onEditActions: () -> Unit,
+    /** What sits above the messages. Text Edit shows the selected text; Snip shows the captured image. */
+    header: @Composable () -> Unit = { CollapsibleSelectionPill(viewModel.selectedText) },
 ) {
     val messages by viewModel.messages.collectAsStateWithLifecycle()
     val assistantState by viewModel.assistantState.collectAsStateWithLifecycle()
@@ -222,8 +244,7 @@ fun ChatMode(
         modifier = Modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // Collapsible Selection Pill
-        CollapsibleSelectionPill(viewModel.selectedText)
+        header()
 
         // Scrollable Messages List
         LazyColumn(
@@ -276,7 +297,7 @@ fun ChatMode(
                 actions = bar,
                 activeActionId = null,
                 onRun = { viewModel.runAction(it) },
-                onOpenSetup = onOpenSetup,
+                onEditActions = onEditActions,
             )
         }
 
@@ -304,7 +325,11 @@ fun CollapsibleSelectionPill(selectedText: String) {
             color = MaterialTheme.colorScheme.surfaceContainer,
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { expanded = !expanded },
+                .heightIn(min = 48.dp)
+                .clickable(
+                    onClickLabel = if (expanded) "Collapse selected text" else "Expand selected text",
+                    role = Role.Button,
+                ) { expanded = !expanded },
         ) {
             Row(
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
@@ -452,17 +477,22 @@ private fun SelectionPreview(text: String, readOnly: Boolean) {
     }
 }
 
+/** State of the Tune button that shows/hides the modifier row (null = this bar has no modifiers, e.g. chat mode). */
+private class ModifierBarState(val expanded: Boolean, val activeCount: Int, val onToggle: () -> Unit)
+
 @Composable
 private fun ActionBar(
     actions: List<PromptAction>,
     activeActionId: String?,
     onRun: (PromptAction) -> Unit,
-    onOpenSetup: () -> Unit,
+    onEditActions: () -> Unit,
+    modifierBar: ModifierBarState? = null,
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         LazyRow(
             modifier = Modifier.weight(1f),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             items(actions, key = { it.id }) { action ->
                 ActionChip(
@@ -472,8 +502,40 @@ private fun ActionBar(
                     onClick = { onRun(action) },
                 )
             }
+            item(key = "edit-actions") { TextAction("Edit actions", onClick = onEditActions) }
         }
-        FilledTonalIconButton(onClick = onOpenSetup) { Icon(Icons.Outlined.Tune, contentDescription = "Edit actions") }
+        if (modifierBar != null) {
+            ToggleIconButton(
+                icon = Icons.Outlined.Tune,
+                label = "Modifiers",
+                checked = modifierBar.expanded || modifierBar.activeCount > 0,
+                onClick = modifierBar.onToggle,
+                stateText = if (modifierBar.activeCount > 0) "${modifierBar.activeCount} on" else null,
+            )
+        }
+    }
+}
+
+/** One toggle chip per modifier. They change the NEXT run (and every run after it) until switched off. */
+@Composable
+private fun ModifierRow(modifiers: List<PromptModifier>, active: Set<String>, onToggle: (String) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(
+            "Modifiers adjust every action you run next, including your own instruction.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(modifiers, key = { it.key }) { modifier ->
+                ActionChip(
+                    label = modifier.label,
+                    iconId = modifier.icon,
+                    selected = modifier.key in active,
+                    onClick = { onToggle(modifier.key) },
+                    toggle = true,
+                )
+            }
+        }
     }
 }
 

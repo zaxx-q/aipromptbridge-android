@@ -43,6 +43,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.toggleableState
+import androidx.compose.ui.state.ToggleableState
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.input.ImeAction
@@ -67,6 +75,8 @@ fun ActionChip(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
+    /** true = this chip is an on/off switch (modifiers); false = a one-tap action that can be "current". */
+    toggle: Boolean = false,
 ) {
     val colors = MaterialTheme.colorScheme
     Surface(
@@ -75,7 +85,17 @@ fun ActionChip(
         shape = MaterialTheme.shapes.small,
         color = if (selected) colors.primary else colors.surfaceContainer,
         contentColor = if (selected) colors.onPrimary else colors.onSurface,
-        modifier = modifier.heightIn(min = 48.dp),
+        modifier = modifier
+            .heightIn(min = 48.dp)
+            .semantics {
+                // Colour alone must not carry the state: tell TalkBack too.
+                if (toggle) {
+                    role = Role.Checkbox
+                    toggleableState = ToggleableState(selected)
+                } else {
+                    this.selected = selected
+                }
+            },
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 16.dp),
@@ -84,6 +104,40 @@ fun ActionChip(
         ) {
             Icon(AipbIcons.byId(iconId), contentDescription = null, modifier = Modifier.size(20.dp))
             Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1)
+        }
+    }
+}
+
+/**
+ * 48dp icon button with an on/off state (accent fill when on). [stateText] is what TalkBack reads after the label,
+ * e.g. "2 on", so the state is not conveyed by colour alone.
+ */
+@Composable
+fun ToggleIconButton(
+    icon: ImageVector,
+    label: String,
+    checked: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    stateText: String? = null,
+) {
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.small,
+        color = if (checked) colors.primary else colors.surfaceContainer,
+        contentColor = if (checked) colors.onPrimary else colors.onSurfaceVariant,
+        modifier = modifier
+            .size(48.dp)
+            .semantics {
+                contentDescription = label
+                role = Role.Checkbox
+                toggleableState = ToggleableState(checked)
+                if (stateText != null) stateDescription = stateText
+            },
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(icon, contentDescription = null)
         }
     }
 }
@@ -105,7 +159,7 @@ fun SegmentedToggle(
             .clip(shape)
             .background(colors.surfaceContainer)
             .border(1.dp, colors.outlineVariant, shape)
-            .padding(4.dp),
+            .padding(horizontal = 4.dp, vertical = 2.dp),
         horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         options.forEachIndexed { index, option ->
@@ -115,7 +169,12 @@ fun SegmentedToggle(
                 shape = shape,
                 color = if (selected) colors.primary else Color.Transparent,
                 contentColor = if (selected) colors.onPrimary else colors.onSurfaceVariant,
-                modifier = Modifier.heightIn(min = 40.dp),
+                modifier = Modifier
+                    .heightIn(min = 48.dp) // each segment is its own touch target
+                    .semantics {
+                        role = Role.RadioButton
+                        this.selected = selected
+                    },
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 14.dp),

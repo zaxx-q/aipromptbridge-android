@@ -5,13 +5,15 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.aipromptbridge.AppContainer
 import com.aipromptbridge.core.engine.AiEngine
-import com.aipromptbridge.core.model.ChatMessage
+import com.aipromptbridge.core.model.ContentPart
 import com.aipromptbridge.core.model.Role
 import com.aipromptbridge.core.prompt.PromptAction
 import com.aipromptbridge.core.prompt.PromptCatalog
 import com.aipromptbridge.core.prompt.SettingKeys
 import com.aipromptbridge.core.provider.FailureKind
 import com.aipromptbridge.core.provider.GenerateResult
+import com.aipromptbridge.core.session.ChatHistory
+import com.aipromptbridge.core.session.ChatSeed
 import com.aipromptbridge.core.session.ChatSession
 import com.aipromptbridge.core.session.ContextMarker
 import com.aipromptbridge.core.session.SessionRepository
@@ -31,6 +33,13 @@ sealed interface ChatAssistantState {
     data class Error(val message: String, val missingApiKey: Boolean) : ChatAssistantState
 }
 
+/**
+ * Multi-turn chat used by Text Edit (about a text selection) and Snip (about a captured image).
+ *
+ * What the model sees is built by [ChatHistory]: stored text messages, with the first user message replaced by the
+ * context-carrying version ([firstModelText]) on EVERY request, plus the optional [image] on that same message.
+ * Sessions on disk stay text-only; the image lives in memory for as long as this ViewModel does.
+ */
 class ChatViewModel(
     private val engine: AiEngine,
     private val catalog: PromptCatalog,
@@ -38,6 +47,15 @@ class ChatViewModel(
     val selectedText: String,
     val isReadOnly: Boolean,
     val initialActionLabel: String = "Selected Text",
+    /** Session origin, e.g. "textedit:chat" or "snip:describe". */
+    private val origin: String = "textedit:chat",
+    private val title: String = selectedText.take(40).ifBlank { "Text Edit Chat" },
+    /** Whose one-tap actions the chat offers: Text Edit's or Snip's. */
+    private val barTool: ToolId = ToolId.TEXT_EDIT,
+    /** Sent with the first user message of every request (in memory only). */
+    private val image: ContentPart.Image? = null,
+    /** An exchange that already happened (a Snip result) which this chat continues from. */
+    private val seed: ChatSeed? = null,
 ) : ViewModel() {
 
     private val _messages = MutableStateFlow<List<StoredMessage>>(emptyList())
@@ -52,119 +70,118 @@ class ChatViewModel(
     private val _profileLabel = MutableStateFlow("")
     val profileLabel: StateFlow<String> = _profileLabel.asStateFlow()
 
-    private var activeSession: ChatSession? = null
-    private var systemInstruction: String = ""
+    @Volatile private var activeSession: ChatSession? = null
+    @Volatile private var systemInstruction: String = ""
     private var job: Job? = null
-    private var lastUserMessage: String? = null
+
+    /** What the model is told the first user message was. Null until the first message of a text chat is sent. */
+    private var firstModelText: String? = seed?.modelUserText
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
             val config = catalog.config()
-            val tool = config.tool(ToolId.TEXT_EDIT)
-            systemInstruction = tool.setting(SettingKeys.CHAT_SYSTEM_INSTRUCTION).ifBlank {
+            systemInstruction = config.tool(ToolId.TEXT_EDIT).setting(SettingKeys.CHAT_SYSTEM_INSTRUCTION).ifBlank {
                 config.chatWindowSystemInstruction
             }
-            _bar.value = tool.barActions()
+            _bar.value = config.tool(barTool).barActions()
             val profile = engine.resolveProfile()
             _profileLabel.value = "${profile.name} · ${profile.model}"
 
-            // Create or initialize the session
-            val title = selectedText.take(40).ifBlank { "Text Edit Chat" }
-            val session = sessions.create(
-                origin = "textedit:chat",
-                title = title,
-                now = System.currentTimeMillis(),
-            )
-            activeSession = session
+            ensureSession()
         }
+    }
+
+    /**
+     * Creates the session once (including the seeded exchange, if any). Both [init] and [send] go through here, so a
+     * message sent before start-up finished can never end up in a second, unseeded session. Blocking: IO only.
+     */
+    @Synchronized
+    private fun ensureSession(): ChatSession {
+        activeSession?.let { return it }
+        val now = System.currentTimeMillis()
+        var session = sessions.create(origin = origin, title = title, now = now)
+        if (seed != null) {
+            session = session
+                .withMessage(Role.USER, seed.userText, now)
+                .withMessage(Role.ASSISTANT, seed.assistantText, now)
+            sessions.save(session)
+            _messages.value = session.messages
+        }
+        activeSession = session
+        return session
     }
 
     fun send(userText: String) {
         val trimmed = userText.trim()
         if (trimmed.isBlank() || _assistantState.value is ChatAssistantState.Generating) return
 
+        // The first message of a text chat carries the task marker and the selected text for the model; the chat
+        // itself only shows what the user typed. (A seeded chat already has its first message.)
+        if (firstModelText == null) {
+            firstModelText = "${ContextMarker.forAction(initialActionLabel)}\n\n$selectedText\n\n$trimmed"
+        }
+
         job?.cancel()
-        lastUserMessage = trimmed
         _assistantState.value = ChatAssistantState.Generating
-
         job = viewModelScope.launch {
-            val session = activeSession ?: withContext(Dispatchers.IO) {
-                sessions.create(
-                    origin = "textedit:chat",
-                    title = selectedText.take(40).ifBlank { "Text Edit Chat" },
-                    now = System.currentTimeMillis(),
-                ).also { activeSession = it }
-            }
-
-            val isFirstMessage = session.messages.isEmpty()
-            val messageToSend = if (isFirstMessage) {
-                "${ContextMarker.forAction(initialActionLabel)}\n\n$selectedText\n\n$trimmed"
-            } else {
-                trimmed
-            }
-
-            val now = System.currentTimeMillis()
-            // In the UI, display the user's actual prompt trimmed
-            val updatedUserSession = session.withMessage(Role.USER, trimmed, now)
-            activeSession = updatedUserSession
-            _messages.value = updatedUserSession.messages
-
-            withContext(Dispatchers.IO) {
-                sessions.save(updatedUserSession)
-            }
-
-            // Build full messages list to send to engine
-            val historyForAi = mutableListOf<ChatMessage>()
-            if (systemInstruction.isNotBlank()) {
-                historyForAi += ChatMessage.system(systemInstruction)
-            }
-            // For AI request, if first message, include context marker + selected text
-            val stored = updatedUserSession.messages
-            stored.forEachIndexed { index, msg ->
-                val role = when (msg.role) {
-                    "assistant" -> Role.ASSISTANT
-                    "system" -> Role.SYSTEM
-                    else -> Role.USER
-                }
-                val content = if (index == 0 && role == Role.USER) messageToSend else msg.text
-                historyForAi += ChatMessage(role, listOf(com.aipromptbridge.core.model.ContentPart.Text(content)))
-            }
-
-            when (val result = engine.chat(historyForAi, sessionProfile = updatedUserSession.profileOverride)) {
-                is GenerateResult.Success -> {
-                    val reply = result.content.trim()
-                    val sessionWithReply = updatedUserSession.withMessage(Role.ASSISTANT, reply, System.currentTimeMillis())
-                    activeSession = sessionWithReply
-                    _messages.value = sessionWithReply.messages
-                    _assistantState.value = ChatAssistantState.Idle
-                    withContext(Dispatchers.IO) {
-                        sessions.save(sessionWithReply)
-                    }
-                }
-                is GenerateResult.Failure -> {
-                    _assistantState.value = ChatAssistantState.Error(
-                        message = result.message,
-                        missingApiKey = result.kind == FailureKind.NO_API_KEY,
-                    )
-                }
-            }
+            val base = withContext(Dispatchers.IO) { ensureSession() }
+            val withUser = base.withMessage(Role.USER, trimmed, System.currentTimeMillis())
+            commit(withUser)
+            requestReply(withUser)
         }
     }
 
     fun runAction(action: PromptAction) {
-        val prompt = action.task.ifBlank { action.label }
-        send(prompt)
+        send(action.task.ifBlank { action.label })
     }
 
+    /**
+     * Asks again WITHOUT adding another user turn: after an error the failed question is still the last message and is
+     * simply re-sent; after an answer, that answer is dropped and regenerated.
+     */
     fun retry() {
-        val lastUser = lastUserMessage ?: return
-        // Remove the last assistant message if there was one, or just re-send
-        send(lastUser)
+        val session = activeSession ?: return
+        val last = session.messages.lastOrNull() ?: return
+        if (_assistantState.value is ChatAssistantState.Generating) return
+
+        job?.cancel()
+        _assistantState.value = ChatAssistantState.Generating
+        job = viewModelScope.launch {
+            val basis = if (last.role == "assistant") {
+                session.withoutLastMessage(System.currentTimeMillis()).also { commit(it) }
+            } else {
+                session
+            }
+            requestReply(basis)
+        }
     }
 
     fun stop() {
         job?.cancel()
         _assistantState.value = ChatAssistantState.Idle
+    }
+
+    private suspend fun requestReply(session: ChatSession) {
+        val history = ChatHistory.build(systemInstruction, session.messages, firstModelText, image)
+        when (val result = engine.chat(history, sessionProfile = session.profileOverride)) {
+            is GenerateResult.Success -> {
+                commit(session.withMessage(Role.ASSISTANT, result.content.trim(), System.currentTimeMillis()))
+                _assistantState.value = ChatAssistantState.Idle
+            }
+            is GenerateResult.Failure -> {
+                _assistantState.value = ChatAssistantState.Error(
+                    message = result.message,
+                    missingApiKey = result.kind == FailureKind.NO_API_KEY,
+                )
+            }
+        }
+    }
+
+    /** Publishes [session] to the UI immediately, then persists it off the main thread. */
+    private suspend fun commit(session: ChatSession) {
+        activeSession = session
+        _messages.value = session.messages
+        withContext(Dispatchers.IO) { sessions.save(session) }
     }
 }
 

@@ -13,6 +13,7 @@ import com.aipromptbridge.core.prompt.PromptInput
 import com.aipromptbridge.core.prompt.PromptRequest
 import com.aipromptbridge.core.prompt.ResponseMode
 import com.aipromptbridge.core.prompt.ResultDestination
+import com.aipromptbridge.core.settings.toResponseMode
 import com.aipromptbridge.core.provider.FailureKind
 import com.aipromptbridge.core.provider.GenerateResult
 import com.aipromptbridge.core.snip.PixelRect
@@ -38,13 +39,24 @@ sealed interface SnipStage {
 sealed interface SnipResult {
     data object Idle : SnipResult
     data class Loading(val actionLabel: String) : SnipResult
-    data class Done(val text: String, val destination: ResultDestination) : SnipResult
+    data class Done(
+        val text: String,
+        val destination: ResultDestination,
+        /** Increases with every run. Identifies "this exchange", e.g. to key the chat that continues from it. */
+        val runId: Int,
+        val actionId: String,
+        val actionLabel: String,
+        /** What was asked: the custom instruction, or else the action's task. Becomes the first chat message. */
+        val request: String,
+    ) : SnipResult
     data class Error(val message: String, val missingApiKey: Boolean) : SnipResult
 }
 
 class SnipViewModel(
     private val engine: AiEngine,
     private val catalog: PromptCatalog,
+    /** From Settings > Default response mode. */
+    initialResponseMode: ResponseMode = ResponseMode.SHOW,
 ) : ViewModel() {
 
     private val _stage = MutableStateFlow<SnipStage>(SnipStage.Capturing)
@@ -57,10 +69,11 @@ class SnipViewModel(
     val bar: StateFlow<List<PromptAction>> = _bar.asStateFlow()
 
     /** Where the result goes: SHOW (in the sheet), COPY (clipboard) or SHARE (system share sheet). */
-    private val _responseMode = MutableStateFlow(ResponseMode.SHOW)
+    private val _responseMode = MutableStateFlow(initialResponseMode)
     val responseMode: StateFlow<ResponseMode> = _responseMode.asStateFlow()
 
     private var job: Job? = null
+    private var runCounter = 0
     @Volatile private var customAction: PromptAction? = null
 
     init {
@@ -110,6 +123,8 @@ class SnipViewModel(
     fun run(action: PromptAction, custom: String? = null) {
         val acting = _stage.value as? SnipStage.Acting ?: return
         job?.cancel()
+        val runId = ++runCounter
+        val request = custom?.trim().takeUnless { it.isNullOrBlank() } ?: action.task.ifBlank { action.label }
         _result.value = SnipResult.Loading(action.label)
         job = viewModelScope.launch {
             val outcome = engine.runAction(
@@ -122,7 +137,8 @@ class SnipViewModel(
                 ),
             )
             _result.value = when (val result = outcome.result) {
-                is GenerateResult.Success -> SnipResult.Done(result.content.trim(), outcome.destination)
+                is GenerateResult.Success ->
+                    SnipResult.Done(result.content.trim(), outcome.destination, runId, action.id, action.label, request)
                 is GenerateResult.Failure ->
                     SnipResult.Error(result.message, missingApiKey = result.kind == FailureKind.NO_API_KEY)
             }
@@ -143,5 +159,9 @@ class SnipViewModel(
 class SnipViewModelFactory(private val container: AppContainer) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T =
-        SnipViewModel(container.engine, container.promptCatalog) as T
+        SnipViewModel(
+            container.engine,
+            container.promptCatalog,
+            container.settingsStore.current.defaultResponse.toResponseMode(),
+        ) as T
 }

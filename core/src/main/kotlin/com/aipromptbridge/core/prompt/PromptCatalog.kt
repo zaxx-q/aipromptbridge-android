@@ -52,6 +52,13 @@ class PromptCatalog(
         update(updated)
     }
 
+    /** Atomically transforms the global modifier list (read-modify-write under one lock) and persists it. */
+    @Synchronized
+    fun updateModifiers(transform: (List<PromptModifier>) -> List<PromptModifier>) {
+        val current = config()
+        update(current.copy(modifiers = transform(current.modifiers)))
+    }
+
     /** "Reset to defaults" for the settings screen. */
     @Synchronized
     fun resetToDefaults() = update(defaults)

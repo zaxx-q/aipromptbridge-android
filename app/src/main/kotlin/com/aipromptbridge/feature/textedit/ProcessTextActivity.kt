@@ -9,9 +9,10 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.runtime.LaunchedEffect
 import com.aipromptbridge.AipbApp
-import com.aipromptbridge.MainActivity
-import com.aipromptbridge.designsystem.AipbTheme
 import com.aipromptbridge.feature.common.copyToClipboard
+import com.aipromptbridge.feature.settings.AipbAppTheme
+import com.aipromptbridge.nav.Destination
+import com.aipromptbridge.nav.mainActivityIntent
 
 /**
  * Entry point for the TextEdit tool: registered for android.intent.action.PROCESS_TEXT, so it shows up in the
@@ -51,7 +52,7 @@ class ProcessTextActivity : ComponentActivity() {
         }
 
         setContent {
-            AipbTheme {
+            AipbAppTheme((application as AipbApp).container.settingsStore) {
                 LaunchedEffect(Unit) {
                     viewModel.autoReplace.collect { replaceSelectionAndFinish(it) }
                 }
@@ -61,8 +62,13 @@ class ProcessTextActivity : ComponentActivity() {
                     onDismiss = { finish() },
                     onReplace = { replaceSelectionAndFinish(it) },
                     onCopy = { copyToClipboard(it) },
+                    // Error panels ("Open setup") land on the API keys screen, the usual fix.
                     onOpenSetup = {
-                        startActivity(Intent(this, MainActivity::class.java))
+                        startActivity(mainActivityIntent(this, Destination.API_KEYS))
+                        finish()
+                    },
+                    onEditActions = {
+                        startActivity(mainActivityIntent(this, Destination.TEXT_ACTIONS))
                         finish()
                     },
                 )

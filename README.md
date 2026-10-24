@@ -24,10 +24,10 @@ It is also a Kotlin learning assignment (see `CONCEPTS.md` for where each requir
 | Setup screen (provider + model + 1 API key) | Implemented (minimal) |
 | **Text Edit** — Edit mode (chips, loading, diff result, Replace/Copy/Retry, read-only handling) | Implemented, end to end |
 | Text Edit — **Chat mode** | Implemented (Phase 4), end to end with tests & previews |
-| Full **Settings** (profiles, multi-key, triggers, behaviour, theme) | **TODO** (Phase 5) |
-| **Prompt editor** (action list + edit action) | **TODO** (Phase 6) — data layer done (`PromptCatalog.updateTool`) |
-| **Snip & Ask** (tile → capture → region → action sheet) | Implemented but **never run on a device** (Phase 7 = verify/fix) |
-| Prompt **modifiers** (Shorter/Formal/Variations…) | Modelled + tested in `:core`; **no UI** (Phase 8) |
+| Full **Settings** (profiles, multi-key, triggers, behaviour, theme) | **Written (Phase 5), never compiled** — see §5a |
+| **Prompt editor** (action list + edit action) | **Written (Phase 6), never compiled** — logic in `:core` (`PromptEditing`), UI in `feature/prompteditor/` |
+| **Snip & Ask** (tile → capture → region → action sheet) | Implemented but **never run on a device** (Phase 7 = verify/fix). "Continue in chat" written, uncompiled (§5a) |
+| Prompt **modifiers** (Shorter/Formal/Variations…) | Toggle row in the text sheet (Tune button) + modifier editor — **written (Phase 8), never compiled** |
 
 Search for remaining work: `grep -rn "TODO" --include=*.kt --include=*.xml .` (every TODO is tagged, e.g. `TODO(chat)`).
 
@@ -65,7 +65,7 @@ core/   (pure Kotlin/JVM — NO android.* imports, ever)           app/   (Andro
   provider/  AiProvider (ABSTRACT, template-method retry)          designsystem/ Color/Type/Shape/Theme, AipbIcons, Components
              GeminiProvider, OpenAiCompatibleProvider,             feature/textedit/  ProcessTextActivity, TextEditSheet, ViewModel
              AnthropicProvider, ProviderRegistry                   feature/snip/      Tile, CaptureService, SnipActivity, selector, sheet
-  keys/      KeyPool (rotation), KeyRepository, KeyPoolRegistry    feature/settings/  SetupScreen (minimal)
+  keys/      KeyPool (rotation), KeyRepository, KeyPoolRegistry    feature/settings/  Settings, Profiles, Keys screens
   profile/   ConnectionProfile, ProfileResolver                    feature/common/    ErrorPanel, clipboard/share helpers
   prompt/    PromptAction/Group/Modifier/Config, PromptComposer,   tools/            AiTool + ToolRegistry (extension point)
              PromptMerge, PromptCatalog, DefaultPrompts(+Data)
@@ -157,9 +157,9 @@ when (val r = engine.chat(messages, sessionProfile = session.profileOverride)) {
 ```
 UI (see `design/stitch/aipromptbridge_textedit_chat_mode_expanded/screen.png`): sheet expanded ~85 %, collapsed "N characters selected" pill,
 user messages right-aligned in a `Panel`, AI replies as plain text (render Markdown), small icon row (copy / replace / retry), `ActionBar` above the composer.
-Also wire the Snip "Continue in chat" TODO (`SnipSheet.kt`). Add unit tests for any new pure logic in `:core`.
+(The Snip "Continue in chat" handoff was done later: see §5a.) Add unit tests for any new pure logic in `:core`.
 
-### Phase 5 — Settings (`feature/settings/`)
+### Phase 5 — Settings (`feature/settings/`) — WRITTEN, NOT COMPILED (see §5a)
 Replace the minimal `SetupScreen` with the Stitch **Settings** screen (`design/stitch/aipromptbridge_settings/`). Sections (list rows with dividers, **no cards**):
 Connection (profiles, API keys), Triggers (switches: text selection menu, Quick Settings tile — use `requestAddSnipTile`, floating button = future),
 Behaviour (default response mode, stream responses = future), Appearance (System/Light/Dark → pass `darkTheme` into `AipbTheme`; persist the choice in a small JSON/DataStore).
@@ -168,7 +168,7 @@ Behaviour (default response mode, stream responses = future), Appearance (System
 - Navigation: a simple `sealed interface Screen` + `remember` state in `MainActivity` is enough; add Navigation Compose only if needed (look up its current version in the docs).
 - **Do not render invented status text** from the mockup ("Engine Ready · v2.4.12", "Android 14 IPC Binder…"). See `docs/DESIGN_NOTES.md`.
 
-### Phase 6 — Prompt editor (`feature/prompteditor/`)
+### Phase 6 — Prompt editor (`feature/prompteditor/`) — WRITTEN, NOT COMPILED (see §5a)
 Screens: action list (`design/stitch/aipromptbridge_actions_prompt_editor/`) and edit action (`…/aipromptbridge_edit_action_fix_grammar/`).
 Everything goes through `PromptCatalog`:
 ```kotlin
@@ -194,20 +194,89 @@ The code exists but has never run. Checklist:
 3. A frame arrives (`CaptureBus`) and `RegionSelector` shows the screenshot **at the right size/orientation, not blank, and without the consent dialog/shade in it** (tune `CAPTURE_DELAY_MS`).
 4. Drag → crop marks + readout; *Use selection* → action sheet shows the **real** cropped thumbnail.
 5. Tapping *Describe*/*Smart Extract* returns text; Copy/Share modes work.
+5b. **Continue in chat** (written, never run): switches the sheet to the chat view; the first two messages are your request and the answer; a follow-up like "what colour is the roof?" is answered from the IMAGE (it is re-sent with the first message each time); *Back to result* and *Continue in chat* resume the same conversation; rotating keeps it; the Retry button regenerates without duplicating your message.
 6. Rotation: `SnipActivity` handles `configChanges`; confirm nothing relaunches the consent flow.
 Then set `SnipTool.implemented = true` (`tools/ToolRegistry.kt`). Optional improvements: resize handles on the selection (`TODO(handles)`), downscale big crops (`TODO(size)`), capture on a background `HandlerThread`.
 
-### Phase 8 — Modifiers UI
+### Phase 8 — Modifiers UI — WRITTEN, NOT COMPILED (see §5a)
 `PromptRequest.activeModifierKeys` and `PromptComposer` already support modifiers (injection into the system prompt, `forcesChat` ⇒ show result instead of replace).
 Add a second row of toggle chips (or open it from the "tune" button), pass the selected keys through `TextEditViewModel.run`. `PromptModifier.icon` ids are already mapped.
 
 ### Phase 9 — Polish & submission
-- Dark theme pass on every screen; verify 48 dp touch targets and TalkBack labels (`SegmentedToggle` needs selected-state semantics).
+- Dark theme pass on every screen; verify 48 dp touch targets and TalkBack labels. **Static parts done** (contrast, hard-coded colours, touch-target scan, selected-state semantics, manifest/log/backup review, see §5a); **a visual pass on a device/emulator is still needed** (both themes, font scale 200%, TalkBack walkthrough).
 - Roboto Flex / mono font files (`Type.kt` TODO); real launcher icon (`ic_launcher_foreground.xml`).
 - Optional features parked for later: streaming (`UrlConnectionTransport` TODO + `ConnectionProfile.streaming`), Gemini `thinkingConfig`, OpenAI `max_completion_tokens`, compare actions (need two inputs; skipped by the generator), Audio/TTS tools, source-app label, floating-button trigger.
 - **Assignment submission:** `File > Export > Project to ZIP File`, name it `MP_<Mentee Name>`. Before exporting: delete `keys.enc` if it ever appeared in the project dir, make sure no API keys are in any file, and run a clean build. Fill `CONCEPTS.md` line numbers if the mentor wants exact locations.
 
 ---------------------------------------------------------------------------------------------------
+
+## 5a. Latest session: Phase 5 + 6 written WITHOUT a compiler (read this first)
+
+The session that wrote Phase 5 and 6 had no Kotlin compiler, Gradle, Android SDK or network, so **nothing below has been compiled or run**.
+New code was cross-checked by hand against the real APIs, and by a small bracket/import checker. Expect a few compile errors; fix them first.
+
+**New in `:core` (pure, with unit tests that have NOT been run):**
+`settings/AppSettings.kt` (`ThemeMode`, `DefaultResponse`, `AppSettings`, `SettingsStore`), `storage/FileSettingsRepository.kt`,
+`profile/ProfileEditing.kt` (validation, upsert/delete/set-active, key-pool names), `keys/KeyEditing.kt` (masking, add/rename/replace/remove),
+`prompt/PromptEditing.kt` (create/update/delete/reset, bar order, group moves), `prompt/ModifierEditing.kt` (modifier create/update/delete/reset). Tests: `settings/SettingsTest`, `profile/ProfileEditingTest`,
+`keys/KeyEditingTest`, `prompt/PromptEditingTest` (includes `PromptMerge` round trips), `prompt/ModifierEditingTest`.
+
+**New in `:app`:** `nav/Navigation.kt` (sealed `Screen`, `Destination` deep links, `NavViewModel`), `feature/settings/*` (Settings, Profiles, Keys,
+theme wrapper `AipbAppTheme`, `TextSelectionTrigger`), `feature/prompteditor/*` (Actions list, Edit action, icon picker, test-on-sample),
+`designsystem/ListComponents.kt`, `feature/ScreenPreviews.kt`. `MainActivity` now hosts the navigation; `SetupScreen` is deleted.
+`ProcessTextActivity` / `SnipActivity` use `AipbAppTheme`; the "Edit actions" link at the end of the chip row in the text sheet opens the prompt editor (the Tune button toggles modifiers, see below);
+"Open setup" in error panels opens the API keys screen. Snip's initial response mode comes from Settings. `SnipTileService` records tile added/removed.
+
+**Deliberate deviations from the roadmap / mockups:**
+- *Quick Settings tile* is an **Add** action + "Added" status, not a switch: Android cannot remove a tile programmatically, so a switch would lie.
+- *Floating button* and *Stream responses* rows from the mockup are **not built** (features do not exist); no invented status card.
+- *Drag to reorder* is replaced by **up/down arrows** in a "Bar order" list (accessible, no drag library).
+- *Default response mode* applies to **Snip & Ask only**; Text Edit actions decide for themselves (replace/show). The row says so.
+- Deleting any **built-in id** (even one the user already edited) is recorded in `deletedDefaults`; the README sketch only did this for untouched defaults, which let an edited-then-deleted action come back after an update.
+- Profile base URLs must be **https://** (the manifest sets `usesCleartextTraffic=false`), so plain-http local servers are rejected with a clear message.
+- The key field uses plain `remember`, not `rememberSaveable`, so a secret never lands in saved-instance-state (rotating the screen clears it).
+- The edit screen shows the action's real id (`ID: custom_…`, mono); this is the stored id, not the invented `act_fg_09a` of the mockup.
+
+**Phase 8 (modifiers) and the Phase 9 work that needs no device:**
+- `ModifierEditing` (core, tested) + `PromptCatalog.updateModifiers` (atomic). Built-in modifiers can be edited/reset but **not deleted** (the merge would
+  re-add them; there is no deleted-defaults list for modifiers); user-created ones can be deleted.
+- The Tune button in the text sheet is now a **modifiers toggle** (`ToggleIconButton`); "Edit actions" is a link at the end of the chip row.
+  Active modifier keys go through `TextEditViewModel.run`, so they also apply to the free-text instruction (as in the Python original). They are not
+  persisted: like the original popup they reset when the sheet closes. The original's `default_tools` (pre-active modifiers) is not ported: every shipped modifier has it empty.
+  Modifiers do not apply to chat mode or Snip yet.
+- Modifier editor: Settings → Modifiers, or Actions → Modifiers (`ModifiersScreen.kt`). This is where the built-in `language` modifier (hard-coded to Indonesian) can be changed.
+- Accessibility: `ActionChip` / `SegmentedToggle` now expose selected / toggle state and roles to TalkBack; segments are 48dp (were 40dp); the
+  collapsible selection pill is a 48dp button with an action label. Touch-target audit of all `size`/`heightIn` values < 48dp found nothing else interactive.
+  Theme audit: no hard-coded colours outside `designsystem/Color.kt` except `RegionSelector` (scrim/pills over a screenshot, intentionally theme-independent).
+- Export hygiene check: no keys, `keys.enc`, keystores, `local.properties` or build output in the archive.
+
+**Snip "Continue in chat" (written, uncompiled, never run):**
+- *Approach:* image-aware chat, as in the Python original (which kept the capture as a session attachment). The chat is seeded with the exchange that
+  already happened (your request + the answer, `ChatSeed`) and the cropped PNG is re-attached to the FIRST user message of every request
+  (`ChatHistory.build`), so follow-ups can still look at the image. Sessions on disk stay text-only; the image lives in memory for the life of the activity.
+  Cost: the image is re-sent with every message (the chat header says so).
+- *Why not text-only seeding:* the model would only know what it had already said about the image; "what colour is the roof?" would fail if the first answer never mentioned it.
+- *Layout:* `SnipSheet` keeps one fixed header and switches its body between the scrolling RESULT view and the bounded-height chat. The chat must not sit inside the
+  scrolling column (its `LazyColumn` would crash: "infinite maximum height"). One `ChatViewModel` per result, keyed `snip-chat-<runId>`, scoped to the activity.
+- *Reuse:* `ChatMode` got a `header` slot (default = the selection pill, so Text Edit is unchanged); `ChatViewModel` got `origin/title/barTool/image/seed` parameters (all defaulted).
+- **Two bugs fixed on the way (they also affected Text Edit chat):** (1) from the 2nd message on, the first message sent to the model was replaced by the newest user text, so the
+  selected text/context was lost after one follow-up; (2) Retry appended a duplicate user message instead of re-asking. Both are covered by `ChatHistoryTest`.
+- *Not done:* a session list UI (saved Snip chats cannot be reopened yet, and a reopened one would have no image); Markdown rendering; modifiers in chat.
+
+**Phase 9 audits that need no device (done):**
+- **Contrast** (`tools/contrast_audit.py` was run on the real tokens in `Color.kt`; all 19 pairs x 2 themes pass WCAG AA: lowest text pair 4.98:1 (light success on page), lowest UI pair 3.69:1 (dark field border on a sheet; needs 3:1). Chip fills vs the page are ~1.1:1 but chips are identified by label+icon, not by fill.
+- **Manifest:** `allowBackup=false` (so `keys.enc` is never backed up), `usesCleartextTraffic=false`, only the launcher, PROCESS_TEXT activity and the permission-guarded tile service are exported.
+  Note `MainActivity` is exported (launcher) and accepts a `Destination` extra that only navigates; it carries no data and unknown values are ignored.
+- **Logging:** the only `Log` call prints an int result code; API keys travel in headers, never in URLs; nothing prints request bodies.
+
+**Still NOT done, and why:**
+- **Phase 7** (device testing of tile, consent dialog, capture, crop, and now the chat view) and any compile/test run: no device or toolchain.
+- **Bundled fonts** (Roboto Flex + a mono face): no font files and no network.
+- Visual dark/light pass, 200% font-scale pass and a TalkBack walkthrough: need a device or emulator.
+- Markdown rendering of Snip results (`TODO(markdown)`), unchanged.
+
+**First steps for the next agent:** `./gradlew :core:test` → `./gradlew :app:assembleDebug` → fix compile errors → open `feature/ScreenPreviews.kt`
+in Split view and compare with `design/stitch/*` → run on a device.
 
 ## 6. How to verify
 

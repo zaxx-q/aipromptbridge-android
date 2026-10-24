@@ -27,10 +27,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.aipromptbridge.AipbApp
-import com.aipromptbridge.MainActivity
-import com.aipromptbridge.designsystem.AipbTheme
 import com.aipromptbridge.designsystem.Panel
 import com.aipromptbridge.designsystem.PrimaryButton
+import com.aipromptbridge.feature.settings.AipbAppTheme
+import com.aipromptbridge.nav.Destination
+import com.aipromptbridge.nav.mainActivityIntent
 
 /**
  * Hosts the whole Snip flow in ONE transparent activity (an activity that is already in the foreground may start
@@ -62,12 +63,16 @@ class SnipActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         setContent {
-            AipbTheme {
+            AipbAppTheme((application as AipbApp).container.settingsStore) {
                 SnipScreen(
                     viewModel = viewModel,
                     onClose = { finish() },
                     onOpenSetup = {
-                        startActivity(Intent(this, MainActivity::class.java))
+                        startActivity(mainActivityIntent(this, Destination.API_KEYS))
+                        finish()
+                    },
+                    onEditActions = {
+                        startActivity(mainActivityIntent(this, Destination.SNIP_ACTIONS))
                         finish()
                     },
                 )
@@ -84,7 +89,7 @@ class SnipActivity : ComponentActivity() {
 }
 
 @Composable
-private fun SnipScreen(viewModel: SnipViewModel, onClose: () -> Unit, onOpenSetup: () -> Unit) {
+private fun SnipScreen(viewModel: SnipViewModel, onClose: () -> Unit, onOpenSetup: () -> Unit, onEditActions: () -> Unit) {
     val stage by viewModel.stage.collectAsStateWithLifecycle()
 
     LaunchedEffect(Unit) {
@@ -104,7 +109,13 @@ private fun SnipScreen(viewModel: SnipViewModel, onClose: () -> Unit, onOpenSetu
             val background = remember(current.screenshot) { current.screenshot.asImageBitmap() }
             Box(Modifier.fillMaxSize()) {
                 Image(background, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.FillBounds)
-                SnipActionSheet(viewModel = viewModel, acting = current, onClose = onClose, onOpenSetup = onOpenSetup)
+                SnipActionSheet(
+                    viewModel = viewModel,
+                    acting = current,
+                    onClose = onClose,
+                    onOpenSetup = onOpenSetup,
+                    onEditActions = onEditActions,
+                )
             }
         }
 

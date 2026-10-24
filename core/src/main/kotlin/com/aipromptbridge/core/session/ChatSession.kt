@@ -34,6 +34,10 @@ data class ChatSession(
 
     fun withMessage(role: Role, text: String, now: Long): ChatSession =
         copy(messages = messages + StoredMessage(role.name.lowercase(), text), updatedAt = now)
+
+    /** Removes the newest message (used to regenerate the last answer). No-op for an empty session. */
+    fun withoutLastMessage(now: Long): ChatSession =
+        if (messages.isEmpty()) this else copy(messages = messages.dropLast(1), updatedAt = now)
 }
 
 object ContextMarker {
