@@ -28,8 +28,8 @@ object SnipTool : AiTool {
     override val title = "Snip & Ask"
     override val description = "Capture the screen, select a region and run an AI action on it."
     override val howToUse = "Add the \"Snip & Ask\" Quick Settings tile, then tap it from any screen."
-    // TODO(snip): flip to true after the capture flow has been verified on a real device (see README Phase 7).
-    override val implemented = false
+    // Verified on device (see README Phase 7).
+    override val implemented = true
 }
 
 object ToolRegistry {

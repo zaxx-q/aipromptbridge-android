@@ -1,10 +1,10 @@
 # AGENTS.md — instructions for the coding agent working in Android Studio
 
-> **LATEST HANDOFF (read first):** Phases 5, 6 and 8 (Settings, Profiles, API keys, Prompt editor, Modifiers) were written in an environment with **no compiler**.
-> They are uncompiled and their new unit tests (`settings/`, `profile/ProfileEditingTest`, `keys/KeyEditingTest`, `prompt/PromptEditingTest`, `prompt/ModifierEditingTest`) have never run.
-> Start with `./gradlew :core:test`, then `./gradlew :app:assembleDebug`, and fix what breaks. Details and deviations: README §5a.
-> Snip "Continue in chat" is also written (image-aware; `SnipSheet.kt`, `SnipChatViewModelFactory.kt`, `core/session/ChatHistory.kt`) and equally unverified.
-> Still open: Phase 7 (device, now including the chat view), bundled fonts, on-device theme/font-scale/TalkBack pass.
+> **LATEST HANDOFF (read first):**
+> - Phases 0 to 8 (Settings, Profiles, API keys, Prompt editor, Modifiers, Text Edit, Chat mode, Snip & Ask) are compiled, fully tested (152/152 core unit tests pass), and verified on-device (API 35).
+> - Snip capture flow (QS tile -> system consent -> screenshot capture -> crop region -> action sheet) verified on real device; `SnipTool.implemented = true`.
+> - Dead `SetupScreen.kt` removed.
+> - Remaining open items: bundled offline font files (Roboto Flex + monospace), TalkBack walkthrough.
 
 You are continuing **AIPromptBridge for Android**. Read `README.md` first (plan, architecture, decisions), then this file.
 The project was authored **without a compiler**, so your first job is to make it build and pass its tests.

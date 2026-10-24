@@ -19,15 +19,14 @@ It is also a Kotlin learning assignment (see `CONCEPTS.md` for where each requir
 
 | Area | State |
 |---|---|
-| `:core` (providers, key rotation, profiles, prompts, diff, storage, engine) | **Fully implemented**, 78/78 unit tests passing |
+| `:core` (providers, key rotation, profiles, prompts, diff, storage, engine) | **Fully implemented**, 152/152 unit tests passing |
 | Design system (tokens, theme, components) | Implemented from the Stitch design |
-| Setup screen (provider + model + 1 API key) | Implemented (minimal) |
-| **Text Edit** — Edit mode (chips, loading, diff result, Replace/Copy/Retry, read-only handling) | Implemented, end to end |
+| Full **Settings** (profiles, multi-key, triggers, behaviour, theme) | **Implemented & verified on device** (Phase 5) |
+| **Text Edit** — Edit mode (chips, loading, diff result, Replace/Copy/Retry, read-only handling) | Implemented & verified on device |
 | Text Edit — **Chat mode** | Implemented (Phase 4), end to end with tests & previews |
-| Full **Settings** (profiles, multi-key, triggers, behaviour, theme) | **Written (Phase 5), never compiled** — see §5a |
-| **Prompt editor** (action list + edit action) | **Written (Phase 6), never compiled** — logic in `:core` (`PromptEditing`), UI in `feature/prompteditor/` |
-| **Snip & Ask** (tile → capture → region → action sheet) | Implemented but **never run on a device** (Phase 7 = verify/fix). "Continue in chat" written, uncompiled (§5a) |
-| Prompt **modifiers** (Shorter/Formal/Variations…) | Toggle row in the text sheet (Tune button) + modifier editor — **written (Phase 8), never compiled** |
+| **Prompt editor** (action list + edit action) | **Implemented & verified on device** (Phase 6) — logic in `:core` (`PromptEditing`), UI in `feature/prompteditor/` |
+| **Snip & Ask** (tile → capture → region → action sheet) | **Verified on device** (Phase 7). Tile, consent, capture, crop, and action sheet all working. |
+| Prompt **modifiers** (Shorter/Formal/Variations…) | **Implemented & verified on device** (Phase 8) — toggle row in text sheet + modifier editor |
 
 Search for remaining work: `grep -rn "TODO" --include=*.kt --include=*.xml .` (every TODO is tagged, e.g. `TODO(chat)`).
 
