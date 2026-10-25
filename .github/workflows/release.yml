@@ -90,6 +90,17 @@ jobs:
           echo "Prepared artifact: ${TARGET_APK}"
           ls -lh release-artifacts/
 
+      - name: Prepare Release Notes
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.vars.outputs.tag }}"
+          python3 tools/extract_changelog_section.py \
+            --changelog CHANGELOG.md \
+            --version "${TAG}" \
+            --output release_body.md
+          echo "Release body:"
+          cat release_body.md
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -101,7 +112,7 @@ jobs:
         with:
           tag_name: ${{ steps.vars.outputs.tag }}
           name: AIPromptBridge ${{ steps.vars.outputs.tag }}
+          body_path: release_body.md
           files: release-artifacts/*.apk
-          generate_release_notes: true
           draft: false
           prerelease: false
