@@ -112,7 +112,7 @@ See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for architectural notes, request 
 ## Getting started
 
 ### Requirements
-- Android Studio Ladybug or newer
+- Android Studio Quail (2026.1+) or newer
 - JDK 17 or higher
 - Android SDK Platform 37 (`compileSdk = 37`, `minSdk = 30`, `targetSdk = 36`)
 - Android device or emulator running Android 11+ (API 30+)

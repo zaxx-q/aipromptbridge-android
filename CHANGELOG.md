@@ -16,9 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Initial Release
 
 - **System Text Processing**: Native Android `ACTION_PROCESS_TEXT` integration opening a bottom sheet to run prompt actions on selected text in any app.
-- **Screen Snip & Vision**: Quick Settings tile and floating capture workflow with interactive cropping for OCR, visual question answering, and image analysis.
+- **Screen Snip & Vision**: Quick Settings tile capture workflow with interactive cropping for OCR, visual question answering, and image analysis.
 - **Multi-Provider AI Engine**: Built-in support for Google Gemini, OpenAI, and Anthropic Claude APIs with key rotation on rate limits and errors.
-- **Prompt Catalog & Customization**: Customizable actions and modifiers with 3-way merge on app updates and local JSON import/export.
+- **Prompt Catalog & Customization**: Customizable actions and modifiers with 3-way merge on app updates.
 - **Encrypted Local Storage**: Encrypted API key storage backed by Android Keystore (AES-GCM).
 - **Design System**: Material 3 UI with WCAG-audited contrast ratios, dark and light mode support.
 - **Automated CI/CD**: GitHub Actions workflow for building and publishing signed release APKs.
