@@ -4,6 +4,7 @@
 > - Phases 0 to 8 (Settings, Profiles, API keys, Prompt editor, Modifiers, Text Edit, Chat mode, Snip & Ask) are compiled, fully tested (152/152 core unit tests pass), and verified on-device (API 35).
 > - Snip capture flow (QS tile -> system consent -> screenshot capture -> crop region -> action sheet) verified on real device; `SnipTool.implemented = true`.
 > - Dead `SetupScreen.kt` removed.
+> - Release APK signing configured in `:app:build.gradle.kts` (supporting `keystore.properties` / environment variables / GitHub secrets, with debug key fallback) and `.github/workflows/release.yml`.
 > - Remaining open items: bundled offline font files (Roboto Flex + monospace), TalkBack walkthrough.
 
 You are continuing **AIPromptBridge for Android**. Read `README.md` and `docs/DEVELOPMENT.md` first (plan, architecture, decisions), then this file.
@@ -45,5 +46,4 @@ Builds clean · `:core:test` green · relevant UI matches the Stitch screen in l
 no new `TODO` without a tag like `TODO(chat)` · README status table updated.
 
 ## Where things are
-`README.md` (plan) · `CONCEPTS.md` (assignment rubric map — keep it accurate if you move code) · `docs/DESIGN_NOTES.md` ·
-`docs/ORIGINAL_NOTES.md` · `design/stitch/` (screens + tokens) · `reference/original-python/` (original source of truth for behaviour).
+`README.md` (overview and setup) · `docs/DEVELOPMENT.md` (architecture, request lifecycle, verification) · `docs/DESIGN_NOTES.md` (tokens and styling) · `docs/ORIGINAL_NOTES.md` (original Python desktop app decisions).

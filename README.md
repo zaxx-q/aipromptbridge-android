@@ -107,8 +107,6 @@ core/ (Pure Kotlin/JVM)               app/ (Android Compose)
 
 See [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) for architectural notes, request lifecycles, and future stretch items.
 
-See [CONCEPTS.md](CONCEPTS.md) for the assignment rubric mapping.
-
 ---
 
 ## Getting started
@@ -128,9 +126,14 @@ See [CONCEPTS.md](CONCEPTS.md) for the assignment rubric mapping.
 # Build the debug APK
 ./gradlew :app:assembleDebug
 
+# Build the signed release APK
+./gradlew :app:assembleRelease
+
 # Install on a connected device
 ./gradlew :app:installDebug
 ```
+
+Release builds automatically sign the output APK using credentials from `keystore.properties` (or environment variables) if present, or the debug keystore as a fallback.
 
 ### Initial setup
 
@@ -145,7 +148,6 @@ See [CONCEPTS.md](CONCEPTS.md) for the assignment rubric mapping.
 ## Technical documentation
 
 - [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md): Design decisions, request pipelines, verification checklists, and stretch tasks.
-- [CONCEPTS.md](CONCEPTS.md): Map of Kotlin and OOP concepts used across the codebase.
 - [docs/DESIGN_NOTES.md](docs/DESIGN_NOTES.md): Design system tokens, color palettes, and contrast checks.
 - [docs/ORIGINAL_NOTES.md](docs/ORIGINAL_NOTES.md): Background notes from the original Python desktop application.
 

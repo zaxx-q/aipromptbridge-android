@@ -1,6 +1,6 @@
 # Decisions carried over from the original Python app
 
-Read `reference/original-python/ARCHITECTURE.md` and the copied sources when behaviour is unclear.
+Decisions ported from the upstream desktop application architecture (https://github.com/zaxx-q/AIPromptBridge).
 
 1. **Template-method providers** — `BaseProvider.generate()` owns retry/key rotation; subclasses implement only the request/response mapping.
    Retry table: 429/401/402/403 rotate the key immediately; 5xx waits 5 s on the same key; empty response rotates + 2 s; network error 1 s.

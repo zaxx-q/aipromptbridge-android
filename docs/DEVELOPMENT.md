@@ -80,17 +80,22 @@ To verify the codebase:
 # 1. Run all core JVM unit tests (152 tests)
 ./gradlew :core:test
 
-# 2. Build debug APK
-./gradlew :app:assembleDebug
+# 2. Build debug and release APKs
+./gradlew :app:assembleDebug :app:assembleRelease
 
 # 3. Clean full build
-./gradlew clean :core:test :app:assembleDebug
+./gradlew clean :core:test :app:assembleDebug :app:assembleRelease
 ```
 
 Key verifications:
 - **Core logic**: Retry/rotation virtual timing, request serialization for Gemini/OpenAI/Anthropic, prompt composition, word diff input reconstruction, JSON serialization round-trips, key masking, and chat history.
-- **Keys at rest**: Run `adb shell run-as com.aipromptbridge cat files/keys.enc` — encrypted ciphertext only, no plaintext keys.
+- **Keys at rest**: Run `adb shell run-as com.aipromptbridge cat files/keys.enc` (encrypted ciphertext only, no plaintext keys).
 - **Prompt generator**: `python3 tools/generate_default_prompts.py && git diff --stat` produces zero diff.
+
+### Release APK Signing
+By default, release builds (`./gradlew :app:assembleRelease`) automatically sign APKs:
+- **Production release keys**: Supply signing credentials via `keystore.properties` in the project root or environment variables (`KEYSTORE_FILE`/`KEYSTORE_PATH`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, `KEY_PASSWORD`). In GitHub Actions, configure secrets `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD`.
+- **Fallback**: If no custom release keystore is provided, Gradle signs the release APK using the standard debug keystore. This guarantees that all release artifacts are validly signed and installable on Android devices without `INSTALL_FAILED_NO_CERTIFICATES`.
 
 ---
 

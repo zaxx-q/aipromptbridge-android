@@ -13,5 +13,7 @@
 # Never commit real keys
 keys.enc
 *.keystore
+*.jks
+keystore.properties
 __pycache__/
 *.pyc
