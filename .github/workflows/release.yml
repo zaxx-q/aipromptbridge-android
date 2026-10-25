@@ -51,6 +51,13 @@ jobs:
             KEYSTORE_FILE="${RUNNER_TEMP:-/tmp}/release.keystore"
             echo "${KEYSTORE_BASE64}" | base64 -d > "${KEYSTORE_FILE}"
             export KEYSTORE_FILE
+          else
+            echo "No release keystore secret configured; creating the documented debug-signing fallback..."
+            mkdir -p "$HOME/.android"
+            keytool -genkeypair -keystore "$HOME/.android/debug.keystore" \
+              -storepass android -keypass android -alias androiddebugkey \
+              -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Android Debug,O=Android,C=US" -noprompt
           fi
           ./gradlew :app:assembleRelease --stacktrace
 
